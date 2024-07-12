@@ -1,8 +1,8 @@
 [gd_scene load_steps=2 format=3 uid="uid://cwmccukcli54j"]
 
-[ext_resource type="Script" path="res://menu.gd" id="1_5upn3"]
+[ext_resource type="Script" path="res://scripts/menu.gd" id="1_5upn3"]
 
-[node name="menu" type="Control"]
+[node name="Menu" type="Control"]
 layout_mode = 3
 anchors_preset = 14
 anchor_top = 0.5
