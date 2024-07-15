@@ -12,45 +12,45 @@ var spawn_points = [
 	Vector3(2.5, 2, -12.5)
 ]
 var players_node: Node = null
+var enet_peer = ENetMultiplayerPeer.new()
+const character = preload("res://scenes/player.tscn")
 
 func _ready():
 	print("World node ready")
 	players_node = get_node("Players")
 	if not players_node:
 		print("Error: Players node not found")
-	if not multiplayer.is_server():
-		return
-	multiplayer.peer_connected.connect(add_player)
-	multiplayer.peer_disconnected.connect(del_player)
 
-func start_hosting():
+func _unhandled_input(event):
+	if Input.is_action_just_pressed("quit"):
+		get_tree().quit()
+
+func _on_host_button_pressed():
 	print("Starting Hosting...")
-	var peer = ENetMultiplayerPeer.new()
-	peer.create_server(port)
-	multiplayer.multiplayer_peer = peer
+	enet_peer.create_server(port)
+	multiplayer.multiplayer_peer = enet_peer
+	multiplayer.peer_connected.connect(add_player)
 	add_player(multiplayer.get_unique_id())
 
-func join_server():
+func _on_join_button_pressed():
 	print("Joining Server...")
-	var peer = ENetMultiplayerPeer.new()
-	peer.create_client(ip, port)
-	multiplayer.multiplayer_peer = peer
-	multiplayer.peer_connected.connect(add_player)
+	enet_peer.create_client(ip, port)
+	multiplayer.multiplayer_peer = enet_peer
 
 func add_player(id: int):
-	print("add player: %s" % id)
-	if not players_node:
-		print("Players node not found")
+	print("Adding player: %s" % id)
+	if players_node.has_node(str(id)):
+		print("Player %s already exists" % id)
 		return
-	var character = preload("res://scenes/player.tscn").instantiate()
-	character.player = id
-	character.name = str(id)
-
+	var player = character.instantiate()
+	player.player = id
+	player.name = str(id)
 	var position_index = players_connected % spawn_points.size()
-	character.transform.origin = spawn_points[position_index]
+	player.transform.origin = spawn_points[position_index]
 	players_connected += 1
-
-	players_node.add_child(character, true)
+	players_node.add_child(player, true)
+	if (id != 1):
+		player._set_position.rpc_id(id, spawn_points[position_index])
 
 func del_player(id: int):
 	if not players_node.has_node(str(id)):

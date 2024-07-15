@@ -3,44 +3,29 @@ extends Node3D
 @export var player: int:
 	set(id):
 		player = id
-		$PlayerInput.set_multiplayer_authority(id)
-		$ServerSynchronizer.set_multiplayer_authority(id)
+@onready var camera = $Camera3D
 
-var rotation_speed := 0.1
-var look_direction := Vector2.ZERO
+var rotation_speed := 0.005
+
+func _enter_tree():
+	set_multiplayer_authority(str(name).to_int())
 
 func _ready():
-	if is_multiplayer_authority():
-		set_process(true)
-	else:
-		set_process(false)
+	if not is_multiplayer_authority(): return
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	camera.current = true
 
-	# Ensure camera is set to current for each player
-	$Camera3D.current = true
+func _unhandled_input(event):
+	if not is_multiplayer_authority(): return
+	if event is InputEventMouseMotion:
+		rotate_y(-event.relative.x * rotation_speed)
+		camera.rotate_x(-event.relative.y * rotation_speed)
+		camera.rotation.x = clamp(camera.rotation.x, -PI/2, PI/2)
 
-func _process(delta):
-	handle_input(delta)
-	if multiplayer.is_server():
-		# Call the RPC function on all peers
-		rpc("send_look_direction", look_direction)
-
-func handle_input(delta):
-	look_direction = Vector2.ZERO
-	if Input.is_action_pressed("ui_left"):
-		look_direction.x -= rotation_speed * delta
-	if Input.is_action_pressed("ui_right"):
-		look_direction.x += rotation_speed * delta
-	if Input.is_action_pressed("ui_up"):
-		look_direction.y -= rotation_speed * delta
-	if Input.is_action_pressed("ui_down"):
-		look_direction.y += rotation_speed * delta
-
-	rotate_y(look_direction.x)
-	$Camera3D.rotate_x(look_direction.y)
-
-@rpc("any_peer")
-func send_look_direction(direction: Vector2):
-	if not multiplayer.is_server():
-		look_direction = direction
-		rotate_y(look_direction.x)
-		$Camera3D.rotate_x(look_direction.y)
+@rpc("any_peer", "call_remote", "reliable")
+func _set_position(pos):
+	print_server("position set")
+	position = pos
+	
+func print_server(msg):
+	print("SERVER: " + msg)
